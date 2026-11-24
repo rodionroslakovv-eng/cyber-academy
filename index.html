@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Кибер-академия: от нуля до мидла</title>
+<style>
+:root{--bg:#0a0e16;--p:#111827;--p2:#0d1320;--b:#1f2a3d;--t:#e5e7eb;--m:#8b98ad;--red:#f05252;--blue:#4c8dff;--g:#2fd072;--y:#f5b73b}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--t);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button{font:inherit;cursor:pointer;color:var(--t);background:#1a2336;border:1px solid var(--b);border-radius:8px;padding:7px 12px}
+button:hover{background:#222f48}button.pri{background:#2a5fd6;border-color:#3b73f0}button:disabled{opacity:.45;cursor:default}
+input,textarea{font:inherit;background:#0b1220;border:1px solid var(--b);color:var(--t);border-radius:8px;padding:7px 10px;width:100%}
+.mono,code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid var(--b);background:var(--p2);flex-wrap:wrap}
+header h1{font-size:16px;margin:0}header .sp{flex:1}
+.bar{width:120px;height:8px;background:#1a2336;border-radius:6px;overflow:hidden}.bar i{display:block;height:100%;background:var(--g);width:0}
+#view{max-width:980px;margin:0 auto;padding:18px 16px 60px}
+h2{margin:6px 0 4px}.sub{color:var(--m)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin:18px 0}
+.card{border:1px solid var(--b);background:var(--p);border-radius:14px;padding:18px;cursor:pointer;transition:.15s}
+.card:hover{transform:translateY(-2px);border-color:#3b73f0}.card .ic{font-size:30px}.card h3{margin:6px 0}
+.badge{font-size:11px;padding:2px 8px;border-radius:99px;background:#1a2336;color:var(--m)}.badge.g{background:#14532d;color:#bff0d0}.badge.y{background:#4a3a0f;color:#ffe29a}
+.grp{margin:20px 0 6px;font-weight:650;color:var(--m);text-transform:uppercase;font-size:12px;letter-spacing:.05em}
+.cap{display:flex;gap:12px;align-items:center;border:1px solid var(--b);background:var(--p);border-radius:12px;padding:11px 14px;margin:7px 0}
+.cap.go{cursor:pointer}.cap.go:hover{border-color:#3b73f0}.cap.lock{opacity:.5}.cap .n{width:30px;height:30px;border-radius:50%;background:#1a2336;display:grid;place-items:center;flex:none}
+.cap.done .n{background:#14532d}.cap .tt{flex:1}
+.tabs{display:flex;gap:6px;margin:12px 0;flex-wrap:wrap}.tabs button.on{background:#2a5fd6;border-color:#3b73f0}
+.th{white-space:pre-wrap;background:var(--p);border:1px solid var(--b);border-radius:12px;padding:16px 18px}
+.box{background:var(--p);border:1px solid var(--b);border-radius:12px;padding:14px 16px;margin:10px 0}
+.task{border:1px solid var(--b);border-radius:10px;padding:10px 12px;margin:8px 0;background:var(--p)}.task.ok{border-color:#1d5a35;background:#0f2a1a}
+.task .row{display:flex;gap:8px;margin-top:6px}.fb{margin-top:6px;font-size:13.5px}.fb.bad{color:#ffb3b3}.fb.good{color:#bff0d0}
+#term{background:#05080e;border:1px solid var(--b);border-radius:10px;height:230px;overflow:auto;padding:8px 10px;font-size:13px;cursor:text}
+.line{white-space:pre-wrap;word-break:break-all}.line.cmd{color:#fff}.line.err{color:#ff8a8a}.line.sys{color:#7e8ba3}
+.inrow{display:flex;gap:6px;background:#05080e;border:1px solid var(--b);border-top:0;border-radius:0 0 10px 10px;padding:6px 10px}.inrow span{color:var(--g);white-space:nowrap}
+.inrow input{border:0;background:transparent;padding:0;outline:0;color:#fff}
+.q{margin:12px 0}.q b{display:block;margin-bottom:5px}.opt{display:block;padding:7px 10px;border:1px solid var(--b);border-radius:8px;margin:5px 0;cursor:pointer;background:#0b1220}.opt.sel{border-color:#3b73f0}.opt.right{border-color:#22c55e;background:#0f2a1a}.opt.wrong{border-color:#ef4444;background:#2a1010}
+.ans{white-space:pre-wrap;background:#0f1a30;border:1px solid #223a6b;border-radius:10px;padding:10px 12px;margin-top:8px}
+.tg{display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none;padding:5px 11px;border:1px solid var(--b);border-radius:99px;background:#141c2d}.tg.on{background:#4a3a0f;border-color:var(--y);color:#ffe29a}
+#toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#14532d;border:1px solid #22c55e;padding:8px 14px;border-radius:10px;display:none;z-index:50}
+</style>
+</head>
+<body>
+<header>
+ <button id="back" style="display:none">← Назад</button>
+ <h1 id="ttl">🎓 Кибер-академия</h1><span class="sp"></span>
+ <button id="aiBtn" title="Настройки ИИ-наставника">⚙ ИИ</button>
+ <span id="coreTg" class="tg" title="Показывать только самые нужные капсулы">⭐ Только важное</span>
+ <span id="pct" class="sub"></span><div class="bar"><i id="barfill"></i></div>
+</header>
+<div id="view"></div>
+<div id="toast"></div>
+<script>
+const $=s=>document.querySelector(s);
+const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
+function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',2600)}
+
+/* ========== прогресс ========== */
+let P={done:[],core:false,pr:{}};
+try{const s=JSON.parse(localStorage.getItem('acad_v1')||'null');if(s)P=Object.assign(P,s)}catch(e){}
+const save=()=>{try{localStorage.setItem('acad_v1',JSON.stringify(P))}catch(e){}};
+const isDone=id=>P.done.includes(id);
+
+/* ========== ИИ (sample) ========== */
+let sample=null;
+const lsGet=(k,d)=>{try{return localStorage.getItem(k)||d}catch(e){return d}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+async function gemini(prompt,json){
+ const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(lsGet('gm_model','gemini-2.5-flash'))+':generateContent',{method:'POST',
+  headers:{'Content-Type':'application/json','x-goog-api-key':lsGet('gm_key','')},
+  body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:json?{responseMimeType:'application/json'}:{}})});
+ if(!r.ok){let m='';try{m=(await r.json()).error.message}catch(e){}throw new Error('Gemini '+r.status+(m?': '+m:''))}
+ const d=await r.json();const c=d.candidates&&d.candidates[0];return c&&c.content?c.content.parts.map(p=>p.text||'').join(''):''}
+function makeSample(){const f=async(p,o)=>{const t=await gemini(typeof p==='string'?p:p.map(m=>m.content).join('\n\n'),false);if(o&&o.onText)o.onText({text:t});return{text:t}};
+ f.json=async p=>JSON.parse(await gemini(p,true));return f}
+async function initAI(){sample=null;if(lsGet('gm_key',''))sample=makeSample();
+ else if(window.claude&&claude.use){try{sample=await claude.use('sample')}catch(e){}}
+ $('#aiBtn').textContent=sample?'⚙ ИИ: подключён':'⚙ ИИ: не настроен';if(S.view==='cap')render()}
+function openAI(){const m=$('#modal')||document.body.appendChild(Object.assign(el('div'),{id:'modal'}));m.style.cssText='position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;z-index:60;padding:14px';m.textContent='';
+ const b=el('div','box');b.style.maxWidth='520px';b.append(el('h3','','⚙ ИИ-наставник (Gemini)'),el('div','sub','Ключ хранится только в этом браузере и отправляется напрямую в Google. Получить ключ: Google AI Studio → «Get API key».'));
+ const k=el('input');k.type='password';k.placeholder='API-ключ Gemini';k.value=lsGet('gm_key','');const md=el('input');md.value=lsGet('gm_model','gemini-2.5-flash');
+ const fb=el('div','fb');const sv=el('button','pri','Сохранить и проверить'),cl=el('button','','Закрыть');
+ sv.onclick=async()=>{lsSet('gm_key',k.value.trim());lsSet('gm_model',md.value.trim()||'gemini-2.5-flash');fb.className='fb';fb.textContent='Проверяю…';
+  try{const t=await gemini('Ответь одним словом: ок',false);fb.className='fb good';fb.textContent='✅ Работает. Ответ: '+t.slice(0,40);await initAI()}catch(e){fb.className='fb bad';fb.textContent='❌ '+e.message+' (проверь ключ и название модели)'}};
+ cl.onclick=()=>m.style.display='none';cl.style.marginLeft='6px';
+ const l1=el('div','sub','Ключ');l1.style.marginTop='10px';const l2=el('div','sub','Модель (можно поменять, если Google переименует)');l2.style.marginTop='8px';const r=el('div');r.style.marginTop='10px';r.append(sv,cl);
+ b.append(l1,k,l2,md,r,fb);m.append(b)}
+$('#aiBtn').onclick=openAI;
+async function aiJSON(prompt){
+ try{return await sample.json(prompt,{cache:false})}catch(e){
+  const r=await sample(prompt,{cache:false});const m=r.text.match(/\{[\s\S]*\}/);if(!m)throw new Error('bad');return JSON.parse(m[0])}}
+
+/* ========== контент ========== */
+const T=(...a)=>a.join('\n');
+const CAPS={
+l1:{t:'Командная строка Linux: первые шаги',core:1,ready:1,
+ theory:T('Терминал — это способ управлять компьютером текстом: ты печатаешь команду, система отвечает. Почти все серверы в мире управляются именно так, поэтому в ИБ без терминала никуда.','','Представь файловую систему как дом с комнатами:','  pwd — «где я?» (показывает текущую папку)','  ls — «что здесь лежит?»','  cd папка — «перейти в комнату»','  cat файл — «прочитать файл»','','Флаги — это опции команды: ls -a показывает ещё и скрытые файлы (их имена начинаются с точки). Атакующие любят прятать там свои вещи, а защитники — проверять.','','Зачем это в ИБ: логи, настройки и улики — это файлы. Умея быстро их находить и читать, ты ведёшь расследование в разы быстрее.'),
+ practice:[
+  {type:'cmd',q:'Узнай, в какой ты папке.',hint:'pwd',rx:/^pwd$/},
+  {type:'cmd',q:'Покажи все файлы, включая скрытые.',hint:'ls -a',rx:/^ls\s+-\w*a/ ,out:/\.hidden/},
+  {type:'cmd',q:'Прочитай скрытый файл.',hint:'cat .hidden',rx:/^cat\s+\.hidden$/},
+  {type:'cmd',q:'Перейди в папку /etc и прочитай файл hostname (имя компьютера).',hint:'cd /etc  →  cat hostname',rx:/^cat\s+(\/etc\/)?hostname$/,out:/\S/}],
+ quiz:[{q:'Что делает команда ls -a?',o:['Удаляет все файлы','Показывает все файлы, включая скрытые','Печатает текущую папку'],a:1,w:'Флаг -a (all) добавляет скрытые файлы — те, чьи имена начинаются с точки.'},
+  {q:'Какая команда показывает, в какой папке ты находишься?',o:['cd','cat','pwd'],a:2,w:'pwd = print working directory.'}]},
+l2:{t:'Права доступа к файлам',core:1,ready:1,
+ theory:T('В Linux у каждого файла есть владелец и правила: кто что может с ним делать. Смотрим командой ls -l:','','  -rw-r--r--  1 student student  120 notes.txt','','Разбор первого блока из 10 символов:','  первый символ: - файл, d папка','  затем три тройки: владелец | группа | все остальные','  в каждой тройке: r — читать, w — писать, x — запускать, «-» — нельзя','','Права записывают и числами: r=4, w=2, x=1, и складывают.','  644 = rw-r--r--  (владелец читает и пишет, остальные только читают)','  600 = rw-------  (только владелец) — так хранят секретные ключи','  755 = rwxr-xr-x  (программа: все могут запускать)','','Команда chmod меняет права: chmod 600 файл, chmod +x скрипт.','','Зачем в ИБ: типичная ошибка — права 777 (всем всё) на файлах с паролями. В расследованиях всегда проверяют, кто мог прочитать или изменить файл.'),
+ practice:[
+  {type:'cmd',q:'Посмотри права файлов в текущей папке.',hint:'ls -l',rx:/^ls\s+-\w*l/},
+  {type:'cmd',q:'Файл secret.key доступен всем на чтение. Сделай его доступным только владельцу (600).',hint:'chmod 600 secret.key',rx:/^chmod\s+600\s+secret\.key$/},
+  {type:'cmd',q:'Сделай скрипт script.sh запускаемым.',hint:'chmod +x script.sh',rx:/^chmod\s+\+x\s+script\.sh$/},
+  {type:'ans',q:'Что означает права 644 простыми словами?',hint:'Подумай: 6 = 4+2, 4 = только чтение.',ok:v=>/(владел|хозя).*(чита|запис|изм)|rw-r--r--/i.test(v)},
+  {type:'ans',q:'Чем опасно выставить 777 на файл с паролями?',hint:'777 = для всех: читать, писать, запускать.',ok:v=>/любой|все(м)?\b|кто угодно|посторонн/i.test(v)}],
+ quiz:[{q:'Что означает -rwxr-xr-- ?',o:['Папка, все могут всё','Файл: владелец rwx, группа r-x, остальные только r','Файл, который нельзя читать никому'],a:1,w:'Первый символ «-» = файл; затем rwx | r-x | r--.'},
+  {q:'Какие права лучше для приватного ключа?',o:['777','644','600'],a:2,w:'600: читать и писать может только владелец.'}]},
+n1:{t:'IP-адрес: адрес устройства в сети',core:1,ready:1,
+ theory:T('Представь город: у каждого дома есть адрес, чтобы почтальон знал, куда нести письмо. В сети у каждого устройства (компьютер, телефон, сервер) тоже есть адрес — IP-адрес. В версии IPv4 он выглядит так: 192.168.1.15 — четыре числа от 0 до 255 через точки.','','Адреса бывают:','  публичные — видны всему интернету (например, у сайтов);','  частные — только внутри дома или офиса: 10.x.x.x, 172.16–31.x.x, 192.168.x.x;','  127.0.0.1 — «я сам» (localhost), адрес твоего же компьютера.','','Людям запоминать числа неудобно, поэтому придумали имена (shop.lab) — их превращает в числа служба DNS (отдельная капсула).','','Зачем в ИБ: в логах почти всегда есть IP. По нему находят источник атаки, блокируют его, сопоставляют события разных систем.'),
+ practice:[
+  {type:'cmd',q:'Узнай IP-адрес своего компьютера.',hint:'ip a',rx:/^ip\s+(a|addr)/,out:/10\.0\.0\.10/},
+  {type:'cmd',q:'Проверь, достижим ли сервер shop.lab.',hint:'ping shop.lab',rx:/^ping\s+(-c\s*\d+\s+)?shop\.lab$/,out:/bytes from/},
+  {type:'ans',q:'Какой из адресов частный: 8.8.8.8, 192.168.0.5 или 93.184.1.1?',hint:'Частные начинаются с 10., 172.16–31. или 192.168.',ok:v=>/192\.168\.0\.5/.test(v)},
+  {type:'ans',q:'Что означает адрес 127.0.0.1?',hint:'Подсказка: слово localhost.',ok:v=>/себ|localhost|я сам|этот (компьютер|устройств)|свой|мо[ей] компьют/i.test(v)}],
+ quiz:[{q:'Какой адрес — частный?',o:['8.8.4.4','10.20.30.40','203.0.113.9'],a:1,w:'10.0.0.0–10.255.255.255 — частный диапазон.'},
+  {q:'Зачем аналитику ИБ IP-адрес в логе?',o:['Чтобы определить источник события и при необходимости его заблокировать','Чтобы узнать пароль пользователя','Он нужен только для интернета'],a:0,w:'IP показывает, откуда пришёл запрос.'}]},
+n2:{t:'Подсети и маска',core:1,ready:1,
+ theory:T('Большую сеть делят на подсети — как город на районы. Чтобы понять, где «район», а где «дом», к IP добавляют маску.','','Запись 192.168.1.0/24 означает: первые 24 бита (три первых числа) — это номер сети, оставшиеся 8 бит — номера устройств.','','Сколько устройств помещается:','  /24 → 2^8 = 256 адресов, минус 2 служебных (адрес сети и широковещательный) = 254 устройства','  /30 → 2^2 = 4 − 2 = 2 устройства','  /16 → 2^16 = 65536 − 2 = 65534','','Устройства в одной подсети общаются напрямую, в разные — через маршрутизатор. В 10.0.0.0/24 первый адрес 10.0.0.0 — это сеть, последний 10.0.0.255 — широковещательный (для «всех сразу»).','','Зачем в ИБ: сегментация сети — базовая защита. Если «серверы» и «гостевой Wi-Fi» в разных подсетях с файрволом между ними, злоумышленник не доберётся от одного до другого.'),
+ practice:[
+  {type:'ans',q:'Сколько устройств помещается в сеть /24?',hint:'256 − 2',ok:v=>/\b254\b/.test(v)},
+  {type:'ans',q:'А в /30?',hint:'4 − 2',ok:v=>/^\s*2\s*$|\b2\b(?!\d)/.test(v)},
+  {type:'ans',q:'Какой широковещательный адрес у сети 10.0.0.0/24?',hint:'Последний адрес сети.',ok:v=>/10\.0\.0\.255/.test(v)},
+  {type:'ans',q:'192.168.1.10 и 192.168.1.200 в сети /24 — в одной подсети? Ответь да/нет и почему.',hint:'Первые три числа совпадают?',ok:v=>/да|одн(ой|а)|yes/i.test(v)&&!/^\s*нет/i.test(v)}],
+ quiz:[{q:'Сколько хостов в /24?',o:['256','254','24'],a:1,w:'256 адресов минус адрес сети и широковещательный.'},
+  {q:'Зачем делят сеть на подсети (сегментация)?',o:['Чтобы интернет работал быстрее','Чтобы ограничить, кто с кем может общаться, и сузить ущерб от взлома','Это нужно только провайдеру'],a:1,w:'Файрвол между сегментами не даёт атаке свободно распространяться.'}]},
+n3:{t:'DNS: телефонная книга интернета',core:1,ready:1,
+ theory:T('Компьютеры общаются по IP-адресам, а люди запоминают имена. DNS (Domain Name System) переводит имя в адрес — как телефонная книга.','','Что происходит, когда ты открываешь shop.lab:','  1) браузер смотрит в свой кэш;','  2) спрашивает DNS-резолвер (обычно у провайдера);','  3) тот при необходимости опрашивает цепочку серверов: корневые → зона (.lab) → сервер самого домена;','  4) получает ответ и сообщает адрес браузеру.','','Типы записей:','  A — имя → IPv4-адрес','  AAAA — имя → IPv6','  CNAME — псевдоним на другое имя','  MX — почтовый сервер домена','  TXT — произвольный текст (используют для проверки почты и владения доменом)','','Зачем в ИБ: DNS — частая цель и инструмент атак. Подмена ответов (спуфинг), домены-двойники для фишинга, утечка данных через DNS-запросы. В логах DNS часто находят заражённые машины: они обращаются к подозрительным доменам.'),
+ practice:[
+  {type:'cmd',q:'Узнай IP-адрес имени shop.lab.',hint:'nslookup shop.lab',rx:/^nslookup\s+shop\.lab$/,out:/10\.0\.0\.5/},
+  {type:'cmd',q:'А у mail.lab?',hint:'nslookup mail.lab',rx:/^nslookup\s+mail\.lab$/,out:/10\.0\.0\.7/},
+  {type:'ans',q:'Какая запись связывает имя с IPv4-адресом? (одна буква)',hint:'Самая простая запись.',ok:v=>/^\s*a\s*$/i.test(v)},
+  {type:'ans',q:'Какая запись указывает почтовый сервер домена?',hint:'Mail e...',ok:v=>/mx/i.test(v)}],
+ quiz:[{q:'Что делает DNS?',o:['Шифрует трафик','Переводит имена сайтов в IP-адреса','Блокирует вирусы'],a:1,w:'DNS — «телефонная книга»: имя → адрес.'},
+  {q:'Почему аналитик смотрит DNS-логи?',o:['Заражённые машины часто обращаются к подозрительным доменам','Чтобы узнать пароли','Они показывают температуру сервера'],a:0,w:'Вредоносное ПО обращается к своим управляющим серверам по именам.'}]},
+n4:{t:'Порты, TCP и UDP',core:1,ready:1,
+ theory:T('Если IP — адрес дома, то порт — номер квартиры. На одном сервере работают разные службы: сайт, почта, удалённый вход. Порт указывает, к какой именно служебе обращаться. Портов 65535.','','Запомни основные:','  22 — SSH (безопасный удалённый вход)','  53 — DNS','  80 — HTTP (сайты без шифрования)','  443 — HTTPS (сайты с шифрованием)','  25 — SMTP (отправка почты)','  3389 — RDP (удалённый рабочий стол Windows)','  3306 — MySQL (база данных)','','Два способа доставки данных:','  TCP — как заказное письмо с подтверждением: сначала «рукопожатие» (SYN → SYN-ACK → ACK), потом надёжная передача. Для сайтов, почты, SSH.','  UDP — как открытка: отправил и всё, без подтверждений. Быстро; для DNS, видео, звонков.','','«Открытый порт» значит, что на нём кто-то слушает. Каждый лишний открытый порт — лишняя дверь, в которую можно стучаться. Поэтому админы закрывают всё ненужное, а злоумышленники сканируют порты в поисках открытых дверей.'),
+ practice:[
+  {type:'cmd',q:'Посмотри, какие порты слушает сервер (опция -tuln).',hint:'ss -tuln',rx:/^ss\s+-\w+/,out:/:22\b/},
+  {type:'ans',q:'Какой порт у HTTPS?',hint:'Цифры из теории.',ok:v=>/\b443\b/.test(v)},
+  {type:'ans',q:'Какой порт у SSH?',hint:'Один из первых.',ok:v=>/\b22\b/.test(v)},
+  {type:'ans',q:'В выводе ss порт 3306 (база данных) доступен всей сети, хотя БД нужна только самому приложению на этом же сервере. Что не так и что сделать?',hint:'Лишняя «дверь».',ok:v=>/лишн|закры|наруж|огранич|файрвол|только локальн|127\.0\.0\.1|localhost/i.test(v)}],
+ quiz:[{q:'Что такое порт?',o:['Номер службы на устройстве, к которой идёт обращение','Разъём на корпусе','Пароль сервера'],a:0,w:'IP — дом, порт — квартира.'},
+  {q:'Чем TCP отличается от UDP?',o:['TCP устанавливает соединение и подтверждает доставку, UDP — нет','UDP надёжнее','Разницы нет'],a:0,w:'TCP надёжный, UDP быстрый.'}]},
+n5:{t:'HTTP и коды ответа',core:1,ready:1,
+ theory:T('HTTP — язык, на котором браузер общается с сайтом: запрос → ответ.','','Запрос: метод (GET — получить, POST — отправить данные), адрес и заголовки.','Ответ: код состояния, заголовки и тело (страница).','','Коды:','  2xx — успех (200 OK)','  3xx — перенаправление (301: страница переехала)','  4xx — ошибка клиента (401 нужен вход, 403 запрещено, 404 не найдено)','  5xx — ошибка сервера (500)','','HTTPS = HTTP внутри шифрованного канала TLS: никто по дороге не прочитает и не подменит данные.','','Зачем в ИБ: коды в логах рассказывают историю. Сотни 404 с одного IP на разные адреса — кто-то ищет, что есть на сервере (сканирование). Подряд 401 на странице входа — подбор пароля. Неожиданные 500 после странных запросов — кто-то ломает приложение. Читать коды — первое умение аналитика.'),
+ practice:[
+  {type:'cmd',q:'Запроси главную страницу сайта вместе с заголовками.',hint:'curl -i shop.lab',rx:/^curl\s+(-\w+\s+)*-i\s+(http:\/\/)?shop\.lab\/?$|^curl\s+-i\s+(http:\/\/)?shop\.lab\/?$/,out:/200/},
+  {type:'cmd',q:'Запроси несуществующую страницу /nothing и получи 404.',hint:'curl -i shop.lab/nothing',rx:/^curl\s+-i\s+(http:\/\/)?shop\.lab\/nothing$/,out:/404/},
+  {type:'cmd',q:'Запроси /secret только заголовки (-I) и получи 403.',hint:'curl -I shop.lab/secret',rx:/^curl\s+-I\s+(http:\/\/)?shop\.lab\/secret$/,out:/403/},
+  {type:'ans',q:'Что означает код 301?',hint:'Страница переехала.',ok:v=>/перенаправ|redirect|переех|перемещ/i.test(v)},
+  {type:'ans',q:'В логе сотни запросов с одного IP, и почти все — 404 на разные адреса. Что это, скорее всего?',hint:'Он что-то ищет.',ok:v=>/скан|разведк|поиск|перебор|ищет/i.test(v)}],
+ quiz:[{q:'Какой код значит «нужна авторизация»?',o:['200','401','500'],a:1,w:'401 Unauthorized.'},
+  {q:'Много подряд 401 на странице входа с одного IP — это…',o:['Обычная работа','Возможный подбор пароля','Ошибка в браузере'],a:1,w:'Брутфорс виден именно так.'}]},
+s1:{t:'Триада CIA: конфиденциальность, целостность, доступность',core:1,ready:1,
+ theory:T('Вся информационная безопасность держится на трёх целях. Их называют CIA (не путать с разведкой):','','Конфиденциальность (Confidentiality) — информацию видят только те, кому можно. Пример нарушения: утечка базы клиентов.','Целостность (Integrity) — данные не изменили незаметно. Пример нарушения: в договоре тихо поменяли сумму.','Доступность (Availability) — система работает, когда нужна. Пример нарушения: сайт лёг из-за DDoS-атаки или шифровальщика.','','Любой инцидент можно разобрать вопросом: какая из трёх свойств пострадало? Часто несколько сразу: шифровальщик нарушает доступность, а если ещё и украл данные — то и конфиденциальность.','','Меры защиты тоже раскладываются по этим трём: шифрование и права — конфиденциальность; хэши и подписи — целостность; резервные копии и защита от DDoS — доступность.'),
+ practice:[
+  {type:'ans',q:'Злоумышленник скачал базу клиентов. Что нарушено?',hint:'Один из трёх вариантов.',ok:v=>/конфиден/i.test(v)},
+  {type:'ans',q:'Сайт магазина недоступен из-за DDoS. Что нарушено?',hint:'Работает ли система?',ok:v=>/доступн/i.test(v)},
+  {type:'ans',q:'Кто-то незаметно поменял реквизиты в счёте. Что нарушено?',hint:'Данные изменили.',ok:v=>/целост/i.test(v)},
+  {type:'ans',q:'Шифровальщик заблокировал файлы и пригрозил опубликовать их. Что нарушено?',hint:'Подумай про два свойства.',ok:v=>/доступн/i.test(v)&&/конфиден/i.test(v)}],
+ quiz:[{q:'Резервные копии защищают в первую очередь…',o:['Конфиденциальность','Доступность','Ничего'],a:1,w:'Позволяют восстановить работу после сбоя или шифровальщика.'},
+  {q:'Цифровая подпись документа помогает с…',o:['Целостностью (понять, что документ не изменён)','Скоростью интернета','Доступностью'],a:0,w:'Если документ изменить, подпись перестанет сходиться.'}]},
+s3:{t:'Пароли и хэши',core:1,ready:1,
+ theory:T('Сайты не хранят твой пароль как есть. Они хранят хэш — «отпечаток» пароля, полученный односторонней функцией: из пароля хэш получить легко, а из хэша вернуть пароль напрямую — нельзя.','','Вход выглядит так: ты вводишь пароль → сайт считает его хэш → сравнивает с сохранённым.','','Важные свойства хэша:','  одинаковые данные всегда дают одинаковый хэш;','  малейшее изменение даёт совершенно другой хэш (проверь в практике);','  результат всегда одной длины.','','Проблема: если у двух пользователей одинаковый пароль, хэши одинаковы, и по готовым таблицам популярных паролей их можно найти. Решение — соль (salt): случайная добавка к каждому паролю перед хэшированием, она делает хэши разными.','','Что делает пароль стойким: длина важнее «хитрых» символов. Четыре случайных слова надёжнее, чем Tr0ub4dor!. Не используй один пароль везде и включай MFA (второй фактор).','','Зачем в ИБ: утечка базы с хэшами — частый инцидент. Слабые пароли подбирают за минуты, сильные и солёные — практически нет.'),
+ practice:[
+  {type:'cmd',q:'Посчитай SHA-256 хэш слова password.',hint:'sha256 password',rx:/^sha256\s+password$/,out:/5e884898/},
+  {type:'cmd',q:'Теперь для Password (с большой буквы) и сравни: хэш совсем другой.',hint:'sha256 Password',rx:/^sha256\s+Password$/,out:/[0-9a-f]{64}/},
+  {type:'ans',q:'Можно ли из хэша напрямую вычислить пароль?',hint:'Односторонняя функция.',ok:v=>/нет|невозм|односторон|нельзя/i.test(v)},
+  {type:'ans',q:'Зачем нужна соль?',hint:'Подумай про одинаковые пароли.',ok:v=>/одинаков|разн|радуж|rainbow|таблиц|уникальн/i.test(v)},
+  {type:'ans',q:'Что надёжнее: Tr0ub4dor! или фраза из четырёх случайных слов? Почему?',hint:'Длина.',ok:v=>/слов|фраз|длин/i.test(v)}],
+ quiz:[{q:'Что хранит правильно сделанный сайт вместо пароля?',o:['Сам пароль','Хэш пароля (желательно с солью)','Первые три символа'],a:1,w:'Хэш + соль.'},
+  {q:'Что лучше повышает стойкость пароля?',o:['Длина','Заменить a на @','Заглавная буква в начале'],a:0,w:'Каждый символ длины сильно увеличивает число вариантов.'}]}
+};
+/* план остальных капсул: ready не задан = «в разработке» */
+const P_=(t,core)=>({t,core:core?1:0,ready:0});
+const PLAN={
+ n6:['Файрвол, прокси, VPN',1],n7:['Модель OSI простыми словами',0],n8:['Wireshark: смотрим трафик',0],n9:['Почта: SMTP, SPF, DKIM, DMARC',0],
+ o1:['Процессы, память, диск',0],o2:['Windows: службы, реестр, журнал событий',1],o3:['Виртуальные машины и контейнеры',0],
+ c1:['Зачем нужна MFA и как она устроена',1],c2:['Шифрование: симметричное и асимметричное',1],c3:['Сертификаты и TLS',1],c4:['SSO и OAuth',0],
+ w1:['Как работает сайт: cookie и сессии',1],w2:['Базы данных и SQL',0],w3:['API и JSON',0],w4:['OWASP Top 10 на уровне «что это»',1],
+ a1:['Угроза, уязвимость, риск',1],a2:['Принцип наименьших привилегий',1],a3:['Многоуровневая защита и Zero Trust',0],a4:['CVE, CVSS и патчи',1],
+ a5:['Вредоносные программы и шифровальщики',1],a6:['Фишинг и социальная инженерия',1],a7:['DDoS',0],a8:['Цепочка атаки и MITRE ATT&CK',1],
+ e1:['Что такое лог и как его читать',1],e2:['Логи Windows и Linux',1],e3:['Что такое SIEM',0],
+ e4:['Основы Python для ИБ',0],e5:['Регулярные выражения',1],e6:['Git',0],
+ e7:['ISO 27001 и NIST CSF',0],e8:['Законы о персональных данных',0],e9:['Легальные границы тестирования',1],
+ e10:['Роли в ИБ и карьерные пути',1],e11:['Английский для ИБ: словарь',0],e12:['Домашняя лаборатория',0]};
+Object.entries(PLAN).forEach(([k,v])=>CAPS[k]=P_(v[0],v[1]));
+const BLUE=[['b1','Разбор логов и поиск аномалий',1],['b2','Как работает SOC: алерт, триаж, эскалация',1],['b3','SIEM и правила обнаружения',1],['b4','Реагирование на инциденты и отчёт',1],['b5','Анализ фишинговых писем и вложений',1],['b6','Windows Event Logs',0],['b7','Сетевой анализ в Wireshark',0],['b8','Форензика: диск и память',0],['b9','Threat hunting',0],['b10','SOAR и автоматизация',0]];
+const RED=[['r1','Как мыслит атакующий: этапы атаки',1],['r2','Разведка и OSINT',1],['r3','Веб-уязвимости: как устроены и как закрываются',1],['r4','Пароли и аутентификация: слабые места',1],['r5','Повышение привилегий (концепция)',0],['r6','Отчёт о пентесте',1],['r7','Легальные площадки для практики',1]];
+[...BLUE,...RED].forEach(([k,t,c])=>CAPS[k]=P_(t,c));
+const TRACKS={
+ basics:{ic:'🧱',name:'Азы',desc:'Фундамент для любого направления: компьютер, сети, основы ИБ, пароли, угрозы. С этого стоит начать, если ты с нуля.',groups:[
+  ['Как устроен компьютер и система',['l1','l2','o1','o2','o3']],
+  ['Сети — самый важный блок',['n1','n2','n3','n4','n5','n6','n7','n8','n9']],
+  ['Основы информационной безопасности',['s1','a1','a2','a3','a4']],
+  ['Криптография и идентификация',['s3','c1','c2','c3','c4']],
+  ['Веб и приложения',['w1','w2','w3','w4']],
+  ['Угрозы и злоумышленники',['a5','a6','a7','a8']],
+  ['Логи и мониторинг',['e1','e2','e3']],
+  ['Инструменты',['e4','e5','e6']],
+  ['Право, стандарты, этика',['e7','e8','e9']],
+  ['Профессия',['e10','e11','e12']]]},
+ blue:{ic:'🔵',name:'Синяя сторона (защита)',desc:'Blue Team: как замечать атаки, расследовать и останавливать. Лучший вход для новичка. Разбор логов, SOC, SIEM, реагирование.',groups:[['Blue Team',BLUE.map(x=>x[0])]]},
+ red:{ic:'🔴',name:'Красная сторона (атака)',desc:'Red Team: как думает атакующий и как устроены уязвимости. Теория и принципы здесь; практику атак отрабатываем только на легальных учебных стендах.',groups:[['Red Team',RED.map(x=>x[0])]]}
+};
+CAPS.c1.t='Зачем нужна MFA и как она устроена';
+
+/* ========== состояние экрана ========== */
+const S={view:'home',track:null,cap:null,tab:0};
+function visibleCaps(tr){const all=TRACKS[tr].groups.flatMap(g=>g[1]);return all.filter(id=>!P.core||CAPS[id].core)}
+function unlocked(tr,id){const rd=visibleCaps(tr).filter(i=>CAPS[i].ready);const k=rd.indexOf(id);if(k<0)return false;return rd.slice(0,k).every(isDone)}
+function progress(){const ready=Object.keys(CAPS).filter(i=>CAPS[i].ready);const d=ready.filter(isDone).length;const p=ready.length?Math.round(d/ready.length*100):0;$('#pct').textContent=d+' из '+ready.length+' готовых капсул';$('#barfill').style.width=p+'%'}
+$('#coreTg').onclick=()=>{P.core=!P.core;save();render()};
+$('#back').onclick=()=>{if(S.view==='cap'){S.view='track';S.cap=null}else{S.view='home';S.track=null}render()};
+
+/* ========== рендер ========== */
+function render(){
+ const v=$('#view');v.textContent='';$('#coreTg').classList.toggle('on',P.core);$('#back').style.display=S.view==='home'?'none':'';progress();
+ if(S.view==='home')home(v);else if(S.view==='track')trackView(v);else capView(v);
+ window.scrollTo(0,0)}
+function home(v){$('#ttl').textContent='🎓 Кибер-академия';
+ v.append(el('h2','','С чего начнём?'),el('div','sub','Выбери направление. Каждое — набор коротких капсул: разбираешь тему → делаешь практику → отвечаешь на вопросы от ИИ → открывается следующая. Если хочешь только самое нужное, включи «⭐ Только важное» сверху.'));
+ const c=el('div','cards');
+ Object.entries(TRACKS).forEach(([k,t])=>{const ids=t.groups.flatMap(g=>g[1]),rd=ids.filter(i=>CAPS[i].ready),d=rd.filter(isDone).length;
+  const cd=el('div','card');cd.append(el('div','ic',t.ic),el('h3','',t.name),el('div','sub',t.desc));
+  const b=el('div');b.style.marginTop='10px';b.append(el('span','badge'+(k==='basics'?' g':''),k==='basics'?'Рекомендую начать здесь':'Скоро'),' ',el('span','badge',rd.length?(d+'/'+rd.length+' готовых'):'в разработке'));cd.append(b);
+  cd.onclick=()=>{S.track=k;S.view='track';render()};c.append(cd)});
+ v.append(c,el('div','sub','Переключаться между направлениями можно в любой момент. Прогресс хранится в этом браузере.'))}
+function trackView(v){const t=TRACKS[S.track];$('#ttl').textContent=t.ic+' '+t.name;
+ v.append(el('h2','',t.name),el('div','sub',t.desc+(P.core?' Показаны только важные капсулы.':'')));
+ let n=0;t.groups.forEach(g=>{const ids=g[1].filter(i=>!P.core||CAPS[i].core);if(!ids.length)return;v.append(el('div','grp',g[0]));
+  ids.forEach(id=>{const c=CAPS[id],isd=isDone(id),un=c.ready&&unlocked(S.track,id);n++;
+   const row=el('div','cap'+(isd?' done':'')+(un?' go':' lock'));row.append(el('div','n',isd?'✓':c.ready?String(n):'🔒'));
+   const tt=el('div','tt');tt.append(el('div','',c.t));tt.append(el('div','sub',!c.ready?'🚧 в разработке':isd?'Пройдена':un?'Открыта':'Сначала пройди предыдущие'));row.append(tt);
+   if(c.core)row.append(el('span','badge y','⭐ важное'));
+   if(un)row.onclick=()=>{S.cap=id;S.view='cap';S.tab=0;render()};v.append(row)})})}
+
+/* ========== капсула ========== */
+let PR=null; // состояние практики
+function capView(v){const c=CAPS[S.cap];$('#ttl').textContent='📘 '+c.t;
+ v.append(el('h2','',c.t));
+ const tabs=el('div','tabs');['1 · Капсула','2 · Практика','3 · Проверка'].forEach((n,i)=>{const b=el('button',S.tab===i?'on':'',n);b.onclick=()=>{S.tab=i;render()};tabs.append(b)});v.append(tabs);
+ if(S.tab===0){v.append(el('div','th',c.theory));const b=el('button','pri','Дальше: практика →');b.style.marginTop='12px';b.onclick=()=>{S.tab=1;render()};v.append(b);mentor(v)}
+ else if(S.tab===1)practice(v,c);else quiz(v,c)}
+
+/* --- наставник --- */
+function mentor(v){const bx=el('div','box');bx.append(el('b','','🧑‍🏫 Не понял? Спроси наставника'));
+ if(!sample){bx.append(el('div','sub','ИИ-наставник не подключён. Нажми «⚙ ИИ» вверху и вставь ключ Gemini. Пока можно перечитать капсулу и пройти практику.'));v.append(bx);return}
+ const inp=el('input');inp.placeholder='Например: объясни ещё раз проще, на примере из жизни';const out=el('div','ans');out.style.display='none';
+ const btn=el('button','pri','Спросить');btn.style.marginTop='8px';
+ const go=async()=>{const q=inp.value.trim();if(!q)return;btn.disabled=true;out.style.display='block';out.textContent='Думаю…';
+  try{const r=await sample('Ты — дружелюбный наставник по кибербезопасности для человека, который начинает с нуля. Отвечай по-русски, просто, с бытовыми аналогиями, до 150 слов. Без инструкций по атакам на реальные системы.\nТема капсулы: '+CAPS[S.cap].t+'\nТеория капсулы:\n'+CAPS[S.cap].theory+'\n\nВопрос студента: '+q,{cache:false,onText:({text})=>{out.textContent=text}});out.textContent=r.text}
+  catch(e){out.textContent='Не получилось ответить, попробуй ещё раз.'}btn.disabled=false};
+ btn.onclick=go;inp.onkeydown=e=>{if(e.key==='Enter')go()};bx.append(inp,btn,out);v.append(bx)}
+
+/* --- виртуальный терминал для практики --- */
+const HOME='/home/student';
+let FS,cwd,hist,startIdx;
+function initFS(){cwd=HOME;hist=[];FS={'/':{d:1},'/home':{d:1},[HOME]:{d:1},'/etc':{d:1},
+ [HOME+'/readme.txt']:{c:'Добро пожаловать в учебный терминал!',p:'rw-r--r--'},[HOME+'/notes.txt']:{c:'пароль для wi-fi не хранить в заметках!',p:'rw-r--r--'},
+ [HOME+'/.hidden']:{c:'FLAG{hidden_files}\nСкрытые файлы начинаются с точки.',p:'rw-r--r--'},[HOME+'/secret.key']:{c:'-----KEY-----',p:'rw-r--r--'},[HOME+'/script.sh']:{c:'echo hello',p:'rw-r--r--'},
+ '/etc/hostname':{c:'student-pc',p:'rw-r--r--'}}}
+function resolve(p){p=(p||'').replace(/^~/,HOME);const parts=((p[0]==='/')?p:cwd+'/'+p).split('/'),o=[];for(const x of parts){if(!x||x==='.')continue;if(x==='..'){o.pop();continue}o.push(x)}return '/'+o.join('/')}
+const kids=p=>{const pre=p==='/'?'/':p+'/';return Object.keys(FS).filter(k=>k!==p&&k.startsWith(pre)&&!k.slice(pre.length).includes('/')).map(k=>k.slice(pre.length)).sort()};
+const prompt=()=>'student@pc:'+(cwd===HOME?'~':cwd)+'$';
+function tokenize(s){const t=[];let c='',q=null,h=false;for(const ch of s){if(q){if(ch===q)q=null;else c+=ch}else if(ch==='"'||ch==="'"){q=ch;h=true}else if(/\s/.test(ch)){if(c||h){t.push(c);c='';h=false}}else c+=ch}if(c||h)t.push(c);return t}
+const HOSTS={'shop.lab':'10.0.0.5','mail.lab':'10.0.0.7','wiki.lab':'10.0.0.9'};
+function curl(a){const fl=a.filter(x=>x[0]==='-').join('');let u=a.filter(x=>x[0]!=='-')[0]||'';u=u.replace(/^https?:\/\//,'');const m=u.match(/^([^\/?]+)(\/.*)?$/);
+ if(!m||!(HOSTS[m[1]]||Object.values(HOSTS).includes(m[1])))return{err:'curl: (6) Could not resolve host: '+(m?m[1]:u)};
+ const path=(m[2]||'/').split('?')[0];const R={'/':[200,'<h1>Магазин shop.lab</h1>'],'/about':[200,'<p>О нас</p>'],'/old':[301,''],'/secret':[403,'403 Forbidden'],'/boom':[500,'500 Internal Server Error']};const r=R[path]||[404,'404 Not Found'];
+ const names={200:'OK',301:'Moved Permanently',403:'Forbidden',404:'Not Found',500:'Internal Server Error'};
+ const head='HTTP/1.1 '+r[0]+' '+names[r[0]]+'\nServer: nginx/1.18.0\nContent-Type: text/html'+(r[0]===301?'\nLocation: /new':'')+'\nContent-Length: '+r[1].length;
+ if(/I/.test(fl))return{out:head};if(/i/.test(fl))return{out:head+'\n\n'+r[1]};return{out:r[1]}}
+function permStr(p){return(FS[p].d?'d':'-')+(FS[p].p||'rwxr-xr-x')}
+function exec(tk){let c=tk[0],a=tk.slice(1);
+ switch(c){
+ case 'help':return{out:'Команды: pwd ls [-a -l] cd cat echo whoami clear\n  chmod ip a · ping · nslookup · ss -tuln · curl [-i -I] · sha256 текст'};
+ case 'pwd':return{out:cwd};case 'whoami':return{out:'student'};case 'echo':return{out:a.join(' ')};case 'clear':return{clear:1};
+ case 'ls':{const fl=a.filter(x=>x[0]==='-').join(''),pa=a.filter(x=>x[0]!=='-')[0],p=resolve(pa||'.');if(!FS[p])return{err:'ls: нет доступа к '+p};if(!FS[p].d)return{out:p.split('/').pop()};
+  const n=kids(p).filter(x=>/a/.test(fl)||x[0]!=='.');const full=x=>(p==='/'?'':p)+'/'+x;
+  if(/l/.test(fl))return{out:n.map(x=>permStr(full(x))+' 1 student student '+String(FS[full(x)].c?FS[full(x)].c.length:4096).padStart(5)+' Nov 25 12:00 '+x).join('\n')};
+  return{out:n.map(x=>FS[full(x)].d?x+'/':x).join('  ')}}
+ case 'cd':{const p=resolve(a[0]||HOME);if(!FS[p]||!FS[p].d)return{err:'cd: нет такой папки'};cwd=p;return{out:''}}
+ case 'cat':{if(!a.length)return{err:'cat: укажи файл'};const o=[];for(const f of a){const p=resolve(f);if(!FS[p])return{err:'cat: '+f+': нет такого файла'};if(FS[p].d)return{err:'cat: '+f+': это папка'};o.push(FS[p].c)}return{out:o.join('\n')}}
+ case 'chmod':{const m=a[0],f=a[1];const p=resolve(f||'');if(!m||!f)return{err:'chmod: chmod 600 файл  или  chmod +x файл'};if(!FS[p]||FS[p].d)return{err:'chmod: '+f+': нет такого файла'};
+  if(/^[0-7]{3}$/.test(m)){FS[p].p=[...m].map(n=>(n&4?'r':'-')+(n&2?'w':'-')+(n&1?'x':'-')).join('');return{out:''}}
+  if(m==='+x'){const s=(FS[p].p||'rw-r--r--').split('');[2,5,8].forEach(i=>s[i]='x');FS[p].p=s.join('');return{out:''}}return{err:'chmod: поддерживаются 3 цифры (например 600) и +x'}}
+ case 'ip':return a[0]==='a'||a[0]==='addr'?{out:'1: lo: inet 127.0.0.1/8\n2: eth0: inet 10.0.0.10/24 brd 10.0.0.255'}:{err:'ip: используй  ip a'};
+ case 'ping':{const h=a.filter(x=>x[0]!=='-'&&!/^\d+$/.test(x))[0];if(!HOSTS[h]&&!Object.values(HOSTS).includes(h))return{err:'ping: '+h+': неизвестный хост'};const ip=HOSTS[h]||h;
+  return{out:'PING '+h+' ('+ip+')\n64 bytes from '+ip+': icmp_seq=1 ttl=64 time=0.42 ms\n64 bytes from '+ip+': icmp_seq=2 ttl=64 time=0.39 ms\n64 bytes from '+ip+': icmp_seq=3 ttl=64 time=0.41 ms'}}
+ case 'nslookup':{const h=a[0];if(!HOSTS[h])return{err:"** server can't find "+h+': NXDOMAIN'};return{out:'Server: 10.0.0.1\n\nName:    '+h+'\nAddress: '+HOSTS[h]}}
+ case 'ss':return{out:'Netid State  Local Address:Port\ntcp   LISTEN 0.0.0.0:22     (ssh)\ntcp   LISTEN 0.0.0.0:80     (http)\ntcp   LISTEN 0.0.0.0:3306   (mysql)\nudp   UNCONN 0.0.0.0:53     (dns)'};
+ case 'curl':return curl(a);
+ default:return{err:'bash: '+c+': команда не найдена (набери help)'}}}
+function tprint(t,c){const T=$('#term');if(!T)return;T.append(el('div','line '+(c||''),t));T.scrollTop=T.scrollHeight}
+async function runLine(line){line=line.trim();if(!line)return;tprint(prompt()+' '+line,'cmd');const tk=tokenize(line);let r;
+ if(tk[0]==='sha256'){const txt=tk.slice(1).join(' ');const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(txt));r={out:[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}}
+ else r=exec(tk);
+ if(r.clear)$('#term').textContent='';else if(r.err)tprint(r.err,'err');else if(r.out)tprint(r.out);
+ hist.push({cmd:line,out:r.err||r.out||''});updTasks()}
+
+/* --- практика --- */
+function prKey(){return P.pr[S.cap]||(P.pr[S.cap]=[])}
+function practice(v,c){
+ const hasCmd=c.practice.some(t=>t.type==='cmd');
+ v.append(el('div','sub','Выполни задания. Подсказка есть у каждого. Заданий: '+c.practice.length+'.'));
+ if(hasCmd){if(!FS)initFS();initFS();const T=el('div','mono');T.id='term';T.onclick=()=>inp.focus();v.append(T);
+  const row=el('div','inrow mono');const pr=el('span','',prompt());const inp=el('input','mono');inp.autocomplete='off';inp.spellcheck=false;inp.placeholder='команда…  (help — список)';row.append(pr,inp);v.append(row);
+  let hp=0;inp.onkeydown=async e=>{if(e.key==='Enter'){const x=inp.value;inp.value='';await runLine(x);pr.textContent=prompt();hp=hist.length}else if(e.key==='ArrowUp'){if(hp>0){hp--;inp.value=hist[hp].cmd}e.preventDefault()}};
+  tprint('Учебный терминал (симуляция). Набери help.','sys')}
+ const list=el('div');list.id='tasks';v.append(list);updTasks();
+ const nx=el('button','pri','Дальше: проверка →');nx.style.marginTop='10px';nx.onclick=()=>{S.tab=2;render()};v.append(nx)}
+function taskOk(i,t){if(prKey().includes(i))return true;if(t.type==='cmd'&&hist.some(h=>t.rx.test(h.cmd.trim())&&(!t.out||t.out.test(h.out)))){prKey().push(i);save();return true}return false}
+function updTasks(){const list=$('#tasks');if(!list)return;list.textContent='';const c=CAPS[S.cap];
+ c.practice.forEach((t,i)=>{const ok=taskOk(i,t);const d=el('div','task'+(ok?' ok':''));d.append(el('div','',(ok?'✅ ':'▶ ')+(i+1)+'. '+t.q));
+  if(!ok){const hb=el('button','','💡 Подсказка');hb.style.marginTop='6px';hb.onclick=()=>{hb.replaceWith(el('div','sub','💡 '+t.hint))};
+   if(t.type==='ans'){const row=el('div','row');const inp=el('input');inp.placeholder='твой ответ…';const b=el('button','pri','Проверить');const fb=el('div','fb');
+    const chk=()=>{if(t.ok(inp.value)){prKey().push(i);save();updTasks()}else{fb.className='fb bad';fb.textContent='Пока не то. Перечитай капсулу или возьми подсказку.'}};
+    b.onclick=chk;inp.onkeydown=e=>{if(e.key==='Enter')chk()};row.append(inp,b);d.append(row,fb)}
+   d.append(hb)}
+  list.append(d)})}
+
+/* --- проверка --- */
+let QZ={};
+function quiz(v,c){
+ const pd=c.practice.every((t,i)=>prKey().includes(i));
+ if(!pd)v.append(el('div','box','💡 Рекомендую сначала закончить практику (выполнено '+prKey().length+' из '+c.practice.length+'). Но проверку можно пройти и сейчас.'));
+ if(isDone(S.cap))v.append(el('div','box','✅ Капсула уже пройдена. Можно пересдать для закрепления.'));
+ const ai=el('div','box');ai.append(el('b','','🤖 Вопросы от ИИ (каждый раз новые)'));
+ if(!sample)ai.append(el('div','sub','ИИ не подключён (кнопка «⚙ ИИ» вверху) — пройди быструю проверку ниже.'));
+ else{const st=QZ[S.cap]||(QZ[S.cap]={asked:[]});
+  if(!st.qs){const b=el('button','pri','Сгенерировать вопросы');b.style.marginTop='8px';b.onclick=async()=>{b.disabled=true;b.textContent='Генерирую…';
+    try{const r=await aiJSON('Составь 3 коротких вопроса для проверки понимания по теме «'+c.t+'» для новичка с нуля. Вопросы на понимание, а не на зубрёжку, ответы — 1–3 предложения. Не повторяй уже заданные: '+JSON.stringify(st.asked)+'. Случайное число для разнообразия: '+Math.floor(Math.random()*1e6)+'.\nТеория для опоры:\n'+c.theory+'\nВерни только JSON: {"questions":["...","...","..."]}');
+     st.qs=(r.questions||[]).slice(0,3);st.asked.push(...st.qs);st.res=null;render()}catch(e){b.disabled=false;b.textContent='Не вышло, ещё раз';}};ai.append(b)}
+  else{st.qs.forEach((q,i)=>{const d=el('div','q');d.append(el('b','',(i+1)+'. '+q));const ta=el('textarea');ta.rows=2;ta.value=(st.ans&&st.ans[i])||'';ta.oninput=()=>{(st.ans=st.ans||[])[i]=ta.value};d.append(ta);
+    if(st.res&&st.res.results&&st.res.results[i]){const rr=st.res.results[i];d.append(el('div','fb '+(rr.ok?'good':'bad'),(rr.ok?'✅ ':'❌ ')+rr.comment))}ai.append(d)});
+   if(st.res){const pass=st.res.results.filter(x=>x.ok).length>=2;ai.append(el('div','ans',st.res.summary+'\n\n'+(pass?'🎉 Проверка пройдена!':'Нужно минимум 2 верных из 3. Перечитай капсулу и нажми «Новые вопросы».')))}
+   const row=el('div');row.style.marginTop='8px';const chk=el('button','pri','Проверить ответы');
+   chk.onclick=async()=>{const A=st.ans||[];if(!st.qs.every((_,i)=>(A[i]||'').trim())){toast('Ответь на все три вопроса');return}chk.disabled=true;chk.textContent='Проверяю…';
+    try{const r=await aiJSON('Ты проверяешь ответы новичка по теме «'+c.t+'». Будь доброжелательным и справедливым: засчитывай ответ, если суть верна, даже простыми словами. Если неверно — коротко объясни, как правильно.\nТеория:\n'+c.theory+'\n\n'+st.qs.map((q,i)=>'Вопрос '+(i+1)+': '+q+'\nОтвет: '+A[i]).join('\n\n')+'\n\nВерни только JSON: {"results":[{"ok":true,"comment":"..."},{...},{...}],"summary":"1–2 предложения общего вывода"}');
+     if(!r.results||r.results.length<3)throw 0;st.res=r;if(r.results.filter(x=>x.ok).length>=2&&!isDone(S.cap)){P.done.push(S.cap);save();toast('✅ Капсула пройдена!')}render()}catch(e){chk.disabled=false;chk.textContent='Проверить ответы';toast('Не удалось проверить, попробуй ещё раз')}};
+   const nw=el('button','','Новые вопросы');nw.style.marginLeft='6px';nw.onclick=()=>{st.qs=null;st.ans=null;st.res=null;render()};row.append(chk,nw);ai.append(row)}}
+ v.append(ai);
+ const qb=el('div','box');qb.append(el('b','','⚡ Быстрая проверка (без ИИ)'));const sel=[];
+ c.quiz.forEach((q,qi)=>{const d=el('div','q');d.append(el('b','',q.q));q.o.forEach((o,oi)=>{const l=el('label','opt',o);l.onclick=()=>{if(l.dataset.lock)return;sel[qi]=oi;d.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));l.classList.add('sel')};d.append(l)});
+  const fb=el('div','fb');d.append(fb);d._fb=fb;qb.append(d)});
+ const b=el('button','pri','Проверить');b.style.marginTop='8px';b.onclick=()=>{let ok=0;qb.querySelectorAll('.q').forEach((d,qi)=>{const q=c.quiz[qi],opts=d.querySelectorAll('.opt');opts.forEach((o,oi)=>{o.dataset.lock=1;o.classList.remove('sel');if(oi===q.a)o.classList.add('right');else if(oi===sel[qi])o.classList.add('wrong')});
+  const good=sel[qi]===q.a;if(good)ok++;d._fb.className='fb '+(good?'good':'bad');d._fb.textContent=(good?'✅ ':'❌ ')+q.w});
+  if(ok===c.quiz.length){if(!isDone(S.cap)){P.done.push(S.cap);save();toast('✅ Капсула пройдена!');progress()}b.after(el('div','ans','🎉 Пройдено! Следующая капсула открыта.'));b.remove()}else{b.textContent='Попробовать снова';b.onclick=()=>render()}};
+ qb.append(b);v.append(qb);
+ if(isDone(S.cap)){const nb=el('button','pri','К списку капсул →');nb.onclick=()=>{S.view='track';render()};v.append(nb)}}
+
+render();
+initAI();
+</script>
+</body>
+</html>
