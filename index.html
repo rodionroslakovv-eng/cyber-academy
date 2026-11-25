@@ -38,6 +38,10 @@ h2{margin:6px 0 4px}.sub{color:var(--m)}
 .ans{white-space:pre-wrap;background:#0f1a30;border:1px solid #223a6b;border-radius:10px;padding:10px 12px;margin-top:8px}
 .tg{display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none;padding:5px 11px;border:1px solid var(--b);border-radius:99px;background:#141c2d}.tg.on{background:#4a3a0f;border-color:var(--y);color:#ffe29a}
 #toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#14532d;border:1px solid #22c55e;padding:8px 14px;border-radius:10px;display:none;z-index:50}
+.gm{margin:7px 0;padding:8px 11px;border-radius:10px;white-space:pre-wrap;max-width:94%}.gm.a{background:#1a2336}.gm.u{background:#1f3a73;margin-left:auto}
+.vz{border:1px solid var(--b);background:#0b1220;border-radius:12px;padding:12px;margin:10px 0}.vzr{display:flex;gap:6px;flex-wrap:wrap}.vzn{padding:6px 9px;border-radius:8px;border:1px solid var(--b);color:var(--m);font-size:13px}.vzn.on{border-color:#3b73f0;color:var(--t)}.vzn.cur{background:#1f3a73}.vzi{margin:10px 0;min-height:44px}
+details.ref{margin-top:10px}details.ref summary{cursor:pointer;color:var(--m)}
+select{font:inherit;background:#0b1220;border:1px solid var(--b);color:var(--t);border-radius:8px;padding:7px 10px;width:100%}
 </style>
 </head>
 <body>
@@ -65,26 +69,47 @@ const isDone=id=>P.done.includes(id);
 let sample=null;
 const lsGet=(k,d)=>{try{return localStorage.getItem(k)||d}catch(e){return d}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+function curModel(){const v=lsGet('gm_model','auto');if(v!=='auto')return v;let l=[];try{l=JSON.parse(lsGet('gm_models','[]'))}catch(e){}return lsGet('gm_last','')||l[0]||'gemini-3.8-flash'}
+const OVL=/\b503\b|\b429\b|high demand|overloaded/i;
+async function flashList(){const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',{headers:{'x-goog-api-key':lsGet('gm_key','')}});
+ if(!r.ok)throw new Error('список моделей: '+r.status);const d=await r.json();const v=n=>parseFloat(n.match(/\d+(\.\d+)?/)[0]);
+ return (d.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')).map(m=>m.name.replace('models/','')).filter(n=>/^gemini-\d+(\.\d+)?-flash(-lite)?$/.test(n)).sort((x,y)=>v(y)-v(x)||x.length-y.length)}
 async function gemini(prompt,json){
- const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(lsGet('gm_model','gemini-2.5-flash'))+':generateContent',{method:'POST',
+ let last;for(let k=0;k<3;k++){try{return await gemini1(prompt,json)}catch(e){last=e;if(!OVL.test(e.message))throw e;await new Promise(r=>setTimeout(r,1500*(k+1)))}}
+ try{const cur=curModel();for(const m of (await flashList()).filter(x=>x!==cur).slice(0,4)){try{const t=await gemini1(prompt,json,m);lsSet(lsGet('gm_model','auto')==='auto'?'gm_last':'gm_model',m);return t}catch(e){if(!OVL.test(e.message)&&!/\b404\b/.test(e.message))throw e}}}
+ catch(e){if(!OVL.test(e.message)&&!/\b404\b/.test(e.message)&&!/список моделей/.test(e.message))throw e}
+ throw last}
+async function gemini1(prompt,json,model){
+ const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model||curModel())+':generateContent',{method:'POST',
   headers:{'Content-Type':'application/json','x-goog-api-key':lsGet('gm_key','')},
   body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:json?{responseMimeType:'application/json'}:{}})});
  if(!r.ok){let m='';try{m=(await r.json()).error.message}catch(e){}throw new Error('Gemini '+r.status+(m?': '+m:''))}
  const d=await r.json();const c=d.candidates&&d.candidates[0];return c&&c.content?c.content.parts.map(p=>p.text||'').join(''):''}
+async function pickModel(){
+ const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',{headers:{'x-goog-api-key':lsGet('gm_key','')}});
+ if(!r.ok)throw new Error('список моделей: '+r.status);const d=await r.json();
+ const c=(d.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')).map(m=>m.name.replace('models/','')).map(n=>({n,m:n.match(/^gemini-(\d+(?:\.\d+)?)-flash$/)})).filter(x=>x.m).sort((a,b)=>parseFloat(b.m[1])-parseFloat(a.m[1]));
+ if(!c.length)throw new Error('не нашёл подходящую модель flash');return c[0].n}
 function makeSample(){const f=async(p,o)=>{const t=await gemini(typeof p==='string'?p:p.map(m=>m.content).join('\n\n'),false);if(o&&o.onText)o.onText({text:t});return{text:t}};
  f.json=async p=>JSON.parse(await gemini(p,true));return f}
 async function initAI(){sample=null;if(lsGet('gm_key',''))sample=makeSample();
  else if(window.claude&&claude.use){try{sample=await claude.use('sample')}catch(e){}}
  $('#aiBtn').textContent=sample?'⚙ ИИ: подключён':'⚙ ИИ: не настроен';if(S.view==='cap')render()}
 function openAI(){const m=$('#modal')||document.body.appendChild(Object.assign(el('div'),{id:'modal'}));m.style.cssText='position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;z-index:60;padding:14px';m.textContent='';
- const b=el('div','box');b.style.maxWidth='520px';b.append(el('h3','','⚙ ИИ-наставник (Gemini)'),el('div','sub','Ключ хранится только в этом браузере и отправляется напрямую в Google. Получить ключ: Google AI Studio → «Get API key».'));
- const k=el('input');k.type='password';k.placeholder='API-ключ Gemini';k.value=lsGet('gm_key','');const md=el('input');md.value=lsGet('gm_model','gemini-2.5-flash');
+ const b=el('div','box');b.style.maxWidth='520px';b.append(el('h3','','⚙ ИИ-наставник (Gemini)'),el('div','sub','Ключ хранится только в этом браузере и отправляется напрямую в Google. Получить ключ: aistudio.google.com/apikey → «Create API key». Вставь ключ — список моделей подгрузится сам.'));
+ const k=el('input');k.type='password';k.placeholder='API-ключ Gemini';k.value=lsGet('gm_key','');const sel=el('select');const rf=el('button','','↻');rf.title='Обновить список моделей';
  const fb=el('div','fb');const sv=el('button','pri','Сохранить и проверить'),cl=el('button','','Закрыть');
- sv.onclick=async()=>{lsSet('gm_key',k.value.trim());lsSet('gm_model',md.value.trim()||'gemini-2.5-flash');fb.className='fb';fb.textContent='Проверяю…';
-  try{const t=await gemini('Ответь одним словом: ок',false);fb.className='fb good';fb.textContent='✅ Работает. Ответ: '+t.slice(0,40);await initAI()}catch(e){fb.className='fb bad';fb.textContent='❌ '+e.message+' (проверь ключ и название модели)'}};
+ const fillSel=()=>{let l=[];try{l=JSON.parse(lsGet('gm_models','[]'))}catch(e){}const cur=lsGet('gm_model','auto');sel.textContent='';const add=(v,t)=>{const o=el('option','',t);o.value=v;sel.append(o)};add('auto','Авто (лучшая доступная)');l.forEach(x=>add(x,x));if(cur!=='auto'&&!l.includes(cur))add(cur,cur);sel.value=cur};
+ const load=async()=>{const key=k.value.trim();if(!key)return;lsSet('gm_key',key);fb.className='fb';fb.textContent='Загружаю список моделей…';
+  try{const l=await flashList();lsSet('gm_models',JSON.stringify(l));fillSel();fb.className='fb good';fb.textContent='Найдено моделей: '+l.length+'. Выбери и нажми «Сохранить и проверить».'}catch(e){fb.className='fb bad';fb.textContent='❌ '+e.message+' (проверь ключ)'}};
+ k.oninput=()=>{clearTimeout(k._t);k._t=setTimeout(load,800)};rf.onclick=load;
+ sv.onclick=async()=>{lsSet('gm_key',k.value.trim());lsSet('gm_model',sel.value||'auto');fb.className='fb';fb.textContent='Проверяю…';
+  try{const t=await gemini('Ответь одним словом: ок',false);fb.className='fb good';fb.textContent='✅ Работает (модель '+curModel()+'). Ответ: '+t.slice(0,40);fillSel();await initAI()}
+  catch(e){fb.className='fb bad';fb.textContent=OVL.test(e.message)?'⏳ Модели Google сейчас перегружены. Ключ в порядке — попробуй через минуту или выбери другую модель.':'❌ '+e.message+' (проверь ключ)'}};
  cl.onclick=()=>m.style.display='none';cl.style.marginLeft='6px';
- const l1=el('div','sub','Ключ');l1.style.marginTop='10px';const l2=el('div','sub','Модель (можно поменять, если Google переименует)');l2.style.marginTop='8px';const r=el('div');r.style.marginTop='10px';r.append(sv,cl);
- b.append(l1,k,l2,md,r,fb);m.append(b)}
+ const l1=el('div','sub','Ключ');l1.style.marginTop='10px';const l2=el('div','sub','Модель');l2.style.marginTop='8px';const mr=el('div');mr.style.cssText='display:flex;gap:6px';mr.append(sel,rf);rf.style.flex='none';
+ const r=el('div');r.style.marginTop='10px';r.append(sv,cl);b.append(l1,k,l2,mr,r,fb);m.append(b);fillSel();
+ if(k.value&&!lsGet('gm_models',''))load()}
 $('#aiBtn').onclick=openAI;
 async function aiJSON(prompt){
  try{return await sample.json(prompt,{cache:false})}catch(e){
@@ -92,6 +117,12 @@ async function aiJSON(prompt){
 
 /* ========== контент ========== */
 const T=(...a)=>a.join('\n');
+const GN3=[
+ {title:'Зачем нужен DNS',fact:'Компьютеры общаются по IP-адресам (числам), а людям удобнее имена. DNS (Domain Name System) переводит имя сайта в IP-адрес — как телефонная книга переводит имя человека в номер.',analogy:'Ты не помнишь номер друга, но помнишь имя — и находишь номер в контактах.',ask:'Своими словами: зачем нужен DNS и что он делает?'},
+ {title:'Путь запроса',viz:'dns',fact:'Когда открывается shop.lab: браузер смотрит свой кэш → спрашивает DNS-резолвер → при необходимости резолвер идёт к корневому серверу → серверу зоны (.lab) → авторитетному серверу домена, который знает IP. Ответ запоминается в кэше.',analogy:'Как найти человека по фамилии: спросить консьержа, он отправит в справочное бюро района, а оттуда — в домоуправление, где знают точный адрес.',ask:'Опиши своими словами, кого и в каком порядке спрашивает браузер, пока не получит IP.'},
+ {title:'Типы записей',fact:'A — имя → IPv4-адрес; AAAA — имя → IPv6; CNAME — псевдоним на другое имя; MX — почтовый сервер домена; TXT — произвольный текст (подтверждение владения доменом, защита почты).',analogy:'Записи — это разные графы в карточке организации: адрес офиса, адрес для писем, второе название.',ask:'Какая запись нужна, чтобы имя вело на IPv4-адрес, и какая — чтобы почта приходила на нужный сервер?'},
+ {title:'DNS и безопасность',fact:'DNS часто используют в атаках: подмена ответов (спуфинг), домены-двойники для фишинга, вывод данных через DNS-запросы. Заражённые компьютеры обращаются к подозрительным доменам, поэтому DNS-логи важны аналитику.',analogy:'Если справочное бюро подменить, люди будут приходить не по тому адресу — и даже не заметят.',ask:'Почему аналитику ИБ полезно смотреть DNS-логи? Приведи пример.'}
+];
 const CAPS={
 l1:{t:'Командная строка Linux: первые шаги',core:1,ready:1,
  theory:T('Терминал — это способ управлять компьютером текстом: ты печатаешь команду, система отвечает. Почти все серверы в мире управляются именно так, поэтому в ИБ без терминала никуда.','','Представь файловую систему как дом с комнатами:','  pwd — «где я?» (показывает текущую папку)','  ls — «что здесь лежит?»','  cd папка — «перейти в комнату»','  cat файл — «прочитать файл»','','Флаги — это опции команды: ls -a показывает ещё и скрытые файлы (их имена начинаются с точки). Атакующие любят прятать там свои вещи, а защитники — проверять.','','Зачем это в ИБ: логи, настройки и улики — это файлы. Умея быстро их находить и читать, ты ведёшь расследование в разы быстрее.'),
@@ -130,7 +161,7 @@ n2:{t:'Подсети и маска',core:1,ready:1,
   {type:'ans',q:'192.168.1.10 и 192.168.1.200 в сети /24 — в одной подсети? Ответь да/нет и почему.',hint:'Первые три числа совпадают?',ok:v=>/да|одн(ой|а)|yes/i.test(v)&&!/^\s*нет/i.test(v)}],
  quiz:[{q:'Сколько хостов в /24?',o:['256','254','24'],a:1,w:'256 адресов минус адрес сети и широковещательный.'},
   {q:'Зачем делят сеть на подсети (сегментация)?',o:['Чтобы интернет работал быстрее','Чтобы ограничить, кто с кем может общаться, и сузить ущерб от взлома','Это нужно только провайдеру'],a:1,w:'Файрвол между сегментами не даёт атаке свободно распространяться.'}]},
-n3:{t:'DNS: телефонная книга интернета',core:1,ready:1,
+n3:{t:'DNS: телефонная книга интернета',core:1,ready:1,guided:GN3,
  theory:T('Компьютеры общаются по IP-адресам, а люди запоминают имена. DNS (Domain Name System) переводит имя в адрес — как телефонная книга.','','Что происходит, когда ты открываешь shop.lab:','  1) браузер смотрит в свой кэш;','  2) спрашивает DNS-резолвер (обычно у провайдера);','  3) тот при необходимости опрашивает цепочку серверов: корневые → зона (.lab) → сервер самого домена;','  4) получает ответ и сообщает адрес браузеру.','','Типы записей:','  A — имя → IPv4-адрес','  AAAA — имя → IPv6','  CNAME — псевдоним на другое имя','  MX — почтовый сервер домена','  TXT — произвольный текст (используют для проверки почты и владения доменом)','','Зачем в ИБ: DNS — частая цель и инструмент атак. Подмена ответов (спуфинг), домены-двойники для фишинга, утечка данных через DNS-запросы. В логах DNS часто находят заражённые машины: они обращаются к подозрительным доменам.'),
  practice:[
   {type:'cmd',q:'Узнай IP-адрес имени shop.lab.',hint:'nslookup shop.lab',rx:/^nslookup\s+shop\.lab$/,out:/10\.0\.0\.5/},
@@ -214,6 +245,7 @@ CAPS.c1.t='Зачем нужна MFA и как она устроена';
 
 /* ========== состояние экрана ========== */
 const S={view:'home',track:null,cap:null,tab:0};
+if(P.last&&P.last.track&&TRACKS[P.last.track]&&(!P.last.cap||CAPS[P.last.cap]))Object.assign(S,P.last);
 function visibleCaps(tr){const all=TRACKS[tr].groups.flatMap(g=>g[1]);return all.filter(id=>!P.core||CAPS[id].core)}
 function unlocked(tr,id){const rd=visibleCaps(tr).filter(i=>CAPS[i].ready);const k=rd.indexOf(id);if(k<0)return false;return rd.slice(0,k).every(isDone)}
 function progress(){const ready=Object.keys(CAPS).filter(i=>CAPS[i].ready);const d=ready.filter(isDone).length;const p=ready.length?Math.round(d/ready.length*100):0;$('#pct').textContent=d+' из '+ready.length+' готовых капсул';$('#barfill').style.width=p+'%'}
@@ -223,6 +255,7 @@ $('#back').onclick=()=>{if(S.view==='cap'){S.view='track';S.cap=null}else{S.view
 /* ========== рендер ========== */
 function render(){
  const v=$('#view');v.textContent='';$('#coreTg').classList.toggle('on',P.core);$('#back').style.display=S.view==='home'?'none':'';progress();
+ P.last={view:S.view,track:S.track,cap:S.cap,tab:S.tab};save();
  if(S.view==='home')home(v);else if(S.view==='track')trackView(v);else capView(v);
  window.scrollTo(0,0)}
 function home(v){$('#ttl').textContent='🎓 Кибер-академия';
@@ -246,10 +279,51 @@ function trackView(v){const t=TRACKS[S.track];$('#ttl').textContent=t.ic+' '+t.n
 let PR=null; // состояние практики
 function capView(v){const c=CAPS[S.cap];$('#ttl').textContent='📘 '+c.t;
  v.append(el('h2','',c.t));
+ const sk=el('div');sk.style.margin='-4px 0 12px';
+ if(!isDone(S.cap)){const b=el('button','','✓ Я уже прошёл — пропустить');b.title='Отметить капсулу пройденной и открыть следующую';
+  b.onclick=()=>{P.done.push(S.cap);save();toast('✅ Отмечено как пройдено');const rd=visibleCaps(S.track).filter(i=>CAPS[i].ready),nx=rd.find(i=>!isDone(i));
+   if(nx){S.cap=nx;S.tab=0}else{S.view='track';S.cap=null}render()};sk.append(b)}
+ else{const b=el('button','','↺ Отметить как не пройденную');b.onclick=()=>{P.done=P.done.filter(i=>i!==S.cap);save();render()};sk.append(el('span','badge g','✓ Пройдена'),' ',b)}
+ v.append(sk);
  const tabs=el('div','tabs');['1 · Капсула','2 · Практика','3 · Проверка'].forEach((n,i)=>{const b=el('button',S.tab===i?'on':'',n);b.onclick=()=>{S.tab=i;render()};tabs.append(b)});v.append(tabs);
- if(S.tab===0){v.append(el('div','th',c.theory));const b=el('button','pri','Дальше: практика →');b.style.marginTop='12px';b.onclick=()=>{S.tab=1;render()};v.append(b);mentor(v)}
+ if(S.tab===0){if(c.guided){guided(v,c)}else{v.append(el('div','th',c.theory));const b=el('button','pri','Дальше: практика →');b.style.marginTop='12px';b.onclick=()=>{S.tab=1;render()};v.append(b);mentor(v)}}
  else if(S.tab===1)practice(v,c);else quiz(v,c)}
 
+/* --- разбор с наставником --- */
+const GL={};
+function dnsViz(){const steps=[['🌐 Браузер','Ты открываешь shop.lab. Браузер сначала смотрит в свой кэш — память о недавних ответах.'],['🗂 DNS-резолвер','В кэше нет — браузер спрашивает резолвер (обычно у провайдера или в офисе).'],['🌍 Корневой сервер','Резолвер спрашивает корень: «Кто отвечает за зону .lab?»'],['📁 Сервер зоны .lab','Он отвечает: «За shop.lab отвечает вот этот сервер».'],['🏠 Сервер домена','Этот сервер знает точный ответ: IP 10.0.0.5 (запись типа A).'],['✅ Ответ','Резолвер запоминает ответ в кэше и возвращает его браузеру. Браузер идёт на 10.0.0.5.']];
+ const w=el('div','vz');let k=0;const row=el('div','vzr'),info=el('div','vzi'),btn=el('button','pri','');
+ const draw=()=>{row.textContent='';steps.forEach((x,i)=>row.append(el('div','vzn'+(i<=k?' on':'')+(i===k?' cur':''),x[0])));info.textContent=steps[k][1];btn.textContent=k<steps.length-1?'Показать следующий шаг →':'Показать сначала'};
+ btn.onclick=()=>{k=(k+1)%steps.length;draw()};draw();w.append(el('b','','Путь DNS-запроса'),row,info,btn);return w}
+function guided(v,c){
+ const G=c.guided,st=GL[S.cap]||(GL[S.cap]={i:0,msgs:[],busy:false,att:0,fin:false});
+ const box=el('div','box'),head=el('b',''),log=el('div'),vz=el('div'),ctl=el('div');box.append(head,log,vz,ctl);
+ const ref=el('details','ref');ref.append(el('summary','','📄 Текст капсулы целиком (для справки)'),el('div','th',c.theory));
+ const send=async(t,kind)=>{if(st.busy||st.fin)return;if(kind==='reply')st.msgs.push({r:'u',t});await gStep(kind,t)};
+ async function gStep(kind,text){st.busy=true;st.draw();const b=G[st.i];
+  const facts=G.map((x,i)=>(i+1)+') '+x.title+': '+x.fact).join('\n');
+  const hist=st.msgs.slice(-8).map(m=>(m.r==='u'?'Студент: ':'Наставник: ')+m.t).join('\n');
+  const prompt='Ты — терпеливый и дружелюбный наставник по кибербезопасности. Разбираешь с абсолютным новичком тему «'+c.t+'» по шагам. Говори по-русски, просто, без жаргона; термины расшифровывай.\nОПОРНЫЕ ФАКТЫ (ими можно пользоваться как истиной; новых фактов, цифр и названий сверх них не выдумывай, примеры и аналогии придумывать можно):\n'+facts+'\n\nСейчас шаг '+(st.i+1)+' из '+G.length+': «'+b.title+'». Аналогия-подсказка: '+b.analogy+'\nПроверочный вопрос: '+b.ask+'\n\n'+(kind==='present'?'РЕЖИМ: объясни этот шаг простыми словами с аналогией (до 120 слов), затем задай проверочный вопрос и попроси ответить СВОИМИ СЛОВАМИ (не угадывать). advance=false.':'РЕЖИМ: оцени последнее сообщение студента. Если это ВОПРОС — ответь на него по делу и мягко вернись к шагу, advance=false. Если это пересказ и суть верна — коротко похвали, мягко поправь неточности и поставь advance=true. Если пересказ неверен или неполон — объясни иначе, другим примером, задай уточняющий вопрос, advance=false. Если студент просит объяснить проще — переобъясни другой аналогией, advance=false. Не выдавай готовый ответ целиком, пока студент не попробовал.')+'\n\nДиалог до сих пор:\n'+hist+'\nПоследнее сообщение студента: '+(text||'(начало шага)')+'\n\nВерни только JSON: {"reply":"текст для студента","advance":true или false}';
+  try{const r=await aiJSON(prompt);st.msgs.push({r:'a',t:String(r.reply||'')});let adv=!!r.advance;
+   if(kind==='reply'){if(adv)st.att=0;else{st.att++;if(st.att>=3){adv=true;st.att=0;st.msgs.push({r:'a',t:'Давай не будем застревать: суть ты уже увидел(а), к деталям вернёмся в практике. Идём дальше.'})}}}
+   if(adv){if(st.i<G.length-1){st.i++;st.busy=false;return gStep('present','')}st.fin=true}
+  }catch(e){st.msgs.push({r:'a',t:'⚠ Не получилось связаться с ИИ ('+(e&&e.message||'ошибка')+'). Проверь «⚙ ИИ» вверху. Можно продолжить без ИИ.'});st.err=1}
+  st.busy=false;st.draw()}
+ const nextStatic=()=>{if(st.i<G.length-1)st.i++;else st.fin=true;st.draw()};
+ st.draw=()=>{head.textContent='🧑‍🏫 Разбор с наставником · '+(st.fin?'готово':'шаг '+(st.i+1)+' из '+G.length+': '+G[st.i].title);
+  log.textContent='';vz.textContent='';ctl.textContent='';
+  if(sample&&!st.err){st.msgs.forEach(m=>log.append(el('div','gm '+m.r,m.t)));if(st.busy)log.append(el('div','gm a','Наставник думает…'))}
+  else{const b=G[st.i];if(st.fin)log.append(el('div','gm a','Теория разобрана.'));else{log.append(el('div','gm a',b.fact+'\n\n💡 '+b.analogy));log.append(el('div','gm a','Подумай: '+b.ask))}}
+  const cur=G[Math.min(st.i,G.length-1)];if(cur.viz==='dns')vz.append(dnsViz());
+  if(st.fin){const nb=el('button','pri','Дальше: практика →');nb.onclick=()=>{S.tab=1;render()};ctl.append(nb);return}
+  if(sample&&!st.err){const row=el('div');row.style.cssText='display:flex;gap:6px;margin-top:8px';const inp=el('input');inp.placeholder='Объясни своими словами или задай вопрос…';inp.disabled=st.busy;
+   const go=()=>{const t=inp.value.trim();if(t)send(t,'reply')};const b1=el('button','pri','Отправить');b1.disabled=st.busy;b1.onclick=go;inp.onkeydown=e=>{if(e.key==='Enter')go()};row.append(inp,b1);
+   const r2=el('div');r2.style.cssText='display:flex;gap:6px;margin-top:6px;flex-wrap:wrap';
+   const b2=el('button','','Не понял, объясни проще');b2.disabled=st.busy;b2.onclick=()=>send('Не понял. Объясни проще и другим примером.','reply');
+   const b3=el('button','','Пропустить шаг');b3.disabled=st.busy;b3.onclick=()=>{st.att=0;if(st.i<G.length-1){st.i++;gStep('present','')}else{st.fin=true;st.draw()}};r2.append(b2,b3);ctl.append(row,r2);setTimeout(()=>{if(!st.busy)inp.focus()},0)}
+  else{const nb=el('button','pri','Понятно, дальше →');nb.style.marginTop='8px';nb.onclick=nextStatic;ctl.append(nb)}};
+ v.append(box,ref);st.draw();
+ if(sample&&!st.err&&!st.msgs.length&&!st.busy)gStep('present','')}
 /* --- наставник --- */
 function mentor(v){const bx=el('div','box');bx.append(el('b','','🧑‍🏫 Не понял? Спроси наставника'));
  if(!sample){bx.append(el('div','sub','ИИ-наставник не подключён. Нажми «⚙ ИИ» вверху и вставь ключ Gemini. Пока можно перечитать капсулу и пройти практику.'));v.append(bx);return}
