@@ -70,19 +70,21 @@ let sample=null;
 const lsGet=(k,d)=>{try{return localStorage.getItem(k)||d}catch(e){return d}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
 function curModel(){const v=lsGet('gm_model','auto');if(v!=='auto')return v;let l=[];try{l=JSON.parse(lsGet('gm_models','[]'))}catch(e){}return lsGet('gm_last','')||l[0]||'gemini-3.8-flash'}
-const OVL=/\b503\b|\b429\b|high demand|overloaded/i;
-async function flashList(){const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',{headers:{'x-goog-api-key':lsGet('gm_key','')}});
+const OVL=/\b503\b|\b429\b|high demand|overloaded|не ответила/i;
+let aiStatus=null;const stat=t=>{if(aiStatus)try{aiStatus(t)}catch(e){}};
+async function tfetch(u,o,ms){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);try{return await fetch(u,Object.assign({},o,{signal:c.signal}))}catch(e){if(e.name==='AbortError')throw new Error('модель не ответила за '+Math.round(ms/1000)+' с');throw e}finally{clearTimeout(t)}}
+async function flashList(){const r=await tfetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',{headers:{'x-goog-api-key':lsGet('gm_key','')}},15000);
  if(!r.ok)throw new Error('список моделей: '+r.status);const d=await r.json();const v=n=>parseFloat(n.match(/\d+(\.\d+)?/)[0]);
  return (d.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')).map(m=>m.name.replace('models/','')).filter(n=>/^gemini-\d+(\.\d+)?-flash(-lite)?$/.test(n)).sort((x,y)=>v(y)-v(x)||x.length-y.length)}
 async function gemini(prompt,json){
- let last;for(let k=0;k<3;k++){try{return await gemini1(prompt,json)}catch(e){last=e;if(!OVL.test(e.message))throw e;await new Promise(r=>setTimeout(r,1500*(k+1)))}}
- try{const cur=curModel();for(const m of (await flashList()).filter(x=>x!==cur).slice(0,4)){try{const t=await gemini1(prompt,json,m);lsSet(lsGet('gm_model','auto')==='auto'?'gm_last':'gm_model',m);return t}catch(e){if(!OVL.test(e.message)&&!/\b404\b/.test(e.message))throw e}}}
+ let last;for(let k=0;k<2;k++){stat('Спрашиваю '+curModel()+(k?' (повтор)':'')+'…');try{return await gemini1(prompt,json)}catch(e){last=e;if(!OVL.test(e.message))throw e;stat('⏳ '+curModel()+' перегружена, жду…');await new Promise(r=>setTimeout(r,1500))}}
+ try{const cur=curModel();for(const m of (await flashList()).filter(x=>x!==cur).slice(0,4)){stat('Пробую другую модель: '+m+'…');try{const t=await gemini1(prompt,json,m);lsSet(lsGet('gm_model','auto')==='auto'?'gm_last':'gm_model',m);return t}catch(e){if(!OVL.test(e.message)&&!/\b404\b/.test(e.message))throw e}}}
  catch(e){if(!OVL.test(e.message)&&!/\b404\b/.test(e.message)&&!/список моделей/.test(e.message))throw e}
  throw last}
 async function gemini1(prompt,json,model){
- const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model||curModel())+':generateContent',{method:'POST',
+ const r=await tfetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model||curModel())+':generateContent',{method:'POST',
   headers:{'Content-Type':'application/json','x-goog-api-key':lsGet('gm_key','')},
-  body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:json?{responseMimeType:'application/json'}:{}})});
+  body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:json?{responseMimeType:'application/json'}:{}})},45000);
  if(!r.ok){let m='';try{m=(await r.json()).error.message}catch(e){}throw new Error('Gemini '+r.status+(m?': '+m:''))}
  const d=await r.json();const c=d.candidates&&d.candidates[0];return c&&c.content?c.content.parts.map(p=>p.text||'').join(''):''}
 async function pickModel(){
@@ -103,9 +105,12 @@ function openAI(){const m=$('#modal')||document.body.appendChild(Object.assign(e
  const load=async()=>{const key=k.value.trim();if(!key)return;lsSet('gm_key',key);fb.className='fb';fb.textContent='Загружаю список моделей…';
   try{const l=await flashList();lsSet('gm_models',JSON.stringify(l));fillSel();fb.className='fb good';fb.textContent='Найдено моделей: '+l.length+'. Выбери и нажми «Сохранить и проверить».'}catch(e){fb.className='fb bad';fb.textContent='❌ '+e.message+' (проверь ключ)'}};
  k.oninput=()=>{clearTimeout(k._t);k._t=setTimeout(load,800)};rf.onclick=load;
- sv.onclick=async()=>{lsSet('gm_key',k.value.trim());lsSet('gm_model',sel.value||'auto');fb.className='fb';fb.textContent='Проверяю…';
-  try{const t=await gemini('Ответь одним словом: ок',false);fb.className='fb good';fb.textContent='✅ Работает (модель '+curModel()+'). Ответ: '+t.slice(0,40);fillSel();await initAI()}
-  catch(e){fb.className='fb bad';fb.textContent=OVL.test(e.message)?'⏳ Модели Google сейчас перегружены. Ключ в порядке — попробуй через минуту или выбери другую модель.':'❌ '+e.message+' (проверь ключ)'}};
+ sv.onclick=async()=>{lsSet('gm_key',k.value.trim());lsSet('gm_model',sel.value||'auto');fb.className='fb';fb.textContent='Проверяю ключ…';sv.disabled=true;const t0=Date.now();
+  aiStatus=x=>{fb.textContent=x+' ('+Math.round((Date.now()-t0)/1000)+' с)'};
+  try{const l=await flashList();lsSet('gm_models',JSON.stringify(l));fillSel();stat('✓ Ключ верный. Пробный запрос к модели');
+   const t=await gemini('Ответь одним словом: ок',false);fb.className='fb good';fb.textContent='✅ Работает (модель '+curModel()+', '+Math.round((Date.now()-t0)/1000)+' с). Ответ: '+t.slice(0,40);fillSel();await initAI()}
+  catch(e){if(/список моделей: 4/.test(e.message)){fb.className='fb bad';fb.textContent='❌ Ключ не принят Google ('+e.message+'). Проверь, что скопирован целиком.';return}fb.className='fb bad';fb.textContent=OVL.test(e.message)?'⏳ Модели Google сейчас перегружены. Ключ в порядке — попробуй через минуту или выбери другую модель.':'❌ '+e.message+' (проверь ключ)'}
+  finally{aiStatus=null;sv.disabled=false}};
  cl.onclick=()=>m.style.display='none';cl.style.marginLeft='6px';
  const l1=el('div','sub','Ключ');l1.style.marginTop='10px';const l2=el('div','sub','Модель');l2.style.marginTop='8px';const mr=el('div');mr.style.cssText='display:flex;gap:6px';mr.append(sel,rf);rf.style.flex='none';
  const r=el('div');r.style.marginTop='10px';r.append(sv,cl);b.append(l1,k,l2,mr,r,fb);m.append(b);fillSel();
